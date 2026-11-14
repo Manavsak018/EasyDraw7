@@ -1,44 +1,60 @@
+
 name: Build EasyDraw 7
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Find and extract source ZIP
         run: |
-          ZIP=$(find . -maxdepth 1 -iname '*.zip' | head -n 1)
-          test -n "$ZIP"
-          mkdir project
-          unzip -q "$ZIP" -d project
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Source ZIP not found"
+            exit 1
+          fi
+          mkdir extracted
+          unzip -q "$ZIP" -d extracted
+          ls -la extracted/EasyDraw7
 
-      - uses: actions/setup-java@v4
+      - name: Set up Java 8
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '8'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '5.6.4'
+          gradle-version: '5.4.1'
 
-      - uses: android-actions/setup-android@v3
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install Android SDK packages
         run: |
+          yes | sdkmanager --licenses
           sdkmanager "platforms;android-28" "build-tools;28.0.3"
 
       - name: Build APK
         run: |
-          cd project/EasyDraw7
-          gradle assembleDebug
+          cd extracted/EasyDraw7
+          gradle assembleDebug --stacktrace
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: EasyDraw7-APK
-          path: project/EasyDraw7/app/build/outputs/apk/debug/*.apk
-          
+          path: extracted/EasyDraw7/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
