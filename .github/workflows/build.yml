@@ -16,18 +16,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract source ZIP
+      - name: Extract source ZIP
         run: |
           ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "Source ZIP not found"
-            exit 1
-          fi
+          test -n "$ZIP"
           mkdir extracted
           unzip -q "$ZIP" -d extracted
           ls -la extracted/EasyDraw7
 
-      - name: Set up Java 8
+      - name: Set up Java 17 for Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-28" "build-tools;28.0.3"
+
+      - name: Set up Java 8 for Gradle
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -37,14 +47,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '5.4.1'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-28" "build-tools;28.0.3"
 
       - name: Build APK
         run: |
@@ -57,4 +59,3 @@ jobs:
           name: EasyDraw7-APK
           path: extracted/EasyDraw7/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
