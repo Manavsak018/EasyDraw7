@@ -1,0 +1,34 @@
+name: Build EasyDraw 7
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract source
+        run: |
+          mkdir project
+          unzip -o EasyDraw7-source.zip -d project
+          find project -name settings.gradle -o -name settings.gradle.kts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build APK
+        run: |
+          cd project/EasyDraw7
+          chmod +x gradlew || true
+          gradle assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EasyDraw7-APK
+          path: project/**/app/build/outputs/apk/debug/*.apk
